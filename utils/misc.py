@@ -8,8 +8,7 @@ import numpy as np
 # https://github.com/ikostrikov/pytorch-ddpg-naf/blob/master/ddpg.py#L11
 def soft_update(target, source, tau):
     """
-    Perform DDPG soft update (move target params toward source based on weight
-    factor tau)
+    Perform DDPG soft update (move target params toward source based on weight factor tau)
     Inputs:
         target (torch.nn.Module): Net to copy parameters to
         source (torch.nn.Module): Net whose parameters to copy
@@ -50,14 +49,14 @@ def onehot_from_logits(logits, eps=0.0, dim=1):
     Given batch of logits, return one-hot sample using epsilon greedy strategy
     (based on given epsilon)
     """
-    # get best (according to current policy) actions in one-hot form
+    #Get best (according to current policy) actions in one-hot form
     argmax_acs = (logits == logits.max(dim, keepdim=True)[0]).float()
     if eps == 0.0:
         return argmax_acs
-    # get random actions in one-hot form
+    #Get random actions in one-hot form
     rand_acs = Variable(torch.eye(logits.shape[1])[[np.random.choice(
         range(logits.shape[1]), size=logits.shape[0])]], requires_grad=False)
-    # chooses between best and random actions using epsilon greedy
+    #Choose between best and random actions using epsilon greedy
     return torch.stack([argmax_acs[i] if r > eps else rand_acs[i] for i, r in
                         enumerate(torch.rand(logits.shape[0]))])
 

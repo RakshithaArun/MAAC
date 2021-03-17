@@ -1,0 +1,4 @@
+#Requirements for MAAC
+PyTorch==0.3.0.post4
+OpenAI Gym==0.9.4
+Tensorboard==0.4.0rc3

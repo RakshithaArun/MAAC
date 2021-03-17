@@ -2,10 +2,13 @@ import argparse
 import torch
 import os
 import numpy as np
+
 from gym.spaces import Box, Discrete
 from pathlib import Path
 from torch.autograd import Variable
 from tensorboardX import SummaryWriter
+
+#Importing from other files in same project
 from utils.make_env import make_env
 from utils.buffer import ReplayBuffer
 from utils.env_wrappers import SubprocVecEnv, DummyVecEnv
@@ -64,6 +67,7 @@ def run(config):
         print("Episodes %i-%i of %i" % (ep_i + 1,
                                         ep_i + 1 + config.n_rollout_threads,
                                         config.n_episodes))
+        env.render('human')
         obs = env.reset()
         model.prep_rollouts(device='cpu')
 
@@ -116,19 +120,15 @@ def run(config):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("env_id", help="Name of environment")
-    parser.add_argument("model_name",
-                        help="Name of directory to store " +
-                             "model/training contents")
+    parser.add_argument("model_name",help="Name of directory to store " + "model/training contents")
     parser.add_argument("--n_rollout_threads", default=12, type=int)
     parser.add_argument("--buffer_length", default=int(1e6), type=int)
-    parser.add_argument("--n_episodes", default=50000, type=int)
+    parser.add_argument("--n_episodes", default=1000, type=int) #50000
     parser.add_argument("--episode_length", default=25, type=int)
     parser.add_argument("--steps_per_update", default=100, type=int)
     parser.add_argument("--num_updates", default=4, type=int,
                         help="Number of updates per update cycle")
-    parser.add_argument("--batch_size",
-                        default=1024, type=int,
-                        help="Batch size for training")
+    parser.add_argument("--batch_size",default=1024, type=int, help="Batch size for training")
     parser.add_argument("--save_interval", default=1000, type=int)
     parser.add_argument("--pol_hidden_dim", default=128, type=int)
     parser.add_argument("--critic_hidden_dim", default=128, type=int)

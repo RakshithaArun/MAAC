@@ -49,7 +49,7 @@ class SubprocVecEnv(VecEnv):
         self.ps = [Process(target=worker, args=(work_remote, remote, CloudpickleWrapper(env_fn)))
             for (work_remote, remote, env_fn) in zip(self.work_remotes, self.remotes, env_fns)]
         for p in self.ps:
-            p.daemon = True # if the main process crashes, we should not cause things to hang
+            p.daemon = True #If the main process crashes, we should not cause things to hang
             p.start()
         for remote in self.work_remotes:
             remote.close()
@@ -58,7 +58,7 @@ class SubprocVecEnv(VecEnv):
         observation_space, action_space = self.remotes[0].recv()
         self.remotes[0].send(('get_agent_types', None))
         self.agent_types = self.remotes[0].recv()
-        VecEnv.__init__(self, len(env_fns), observation_space, action_space)
+        VecEnv.__init__(self, len(env_fns), observation_space, action_space) 
 
     def step_async(self, actions):
         for remote, action in zip(self.remotes, actions):
@@ -72,6 +72,7 @@ class SubprocVecEnv(VecEnv):
         return np.stack(obs), np.stack(rews), np.stack(dones), infos
 
     def reset(self):
+        #print("YOYOYO")
         for remote in self.remotes:
             remote.send(('reset', None))
         return np.stack([remote.recv() for remote in self.remotes])

@@ -18,7 +18,7 @@ class BasePolicy(nn.Module):
         """
         super(BasePolicy, self).__init__()
 
-        if norm_in:  # normalize inputs
+        if norm_in:  #Normalize inputs
             self.in_fn = nn.BatchNorm1d(input_dim, affine=False)
         else:
             self.in_fn = lambda x: x
@@ -30,8 +30,7 @@ class BasePolicy(nn.Module):
     def forward(self, X):
         """
         Inputs:
-            X (PyTorch Matrix): Batch of observations (optionally a tuple that
-                                additionally includes a onehot label)
+            X (PyTorch Matrix): Batch of observations (optionally a tuple that additionally includes a onehot label)
         Outputs:
             out (PyTorch Matrix): Actions
         """
@@ -70,7 +69,7 @@ class DiscretePolicy(BasePolicy):
         if return_all_probs:
             rets.append(probs)
         if return_log_pi:
-            # return log probability of selected action
+            #Return log probability of selected action
             rets.append(log_probs.gather(1, int_act))
         if regularize:
             rets.append([(out**2).mean()])
