@@ -17,8 +17,8 @@ class Scenario(BaseScenario):
         #Setting World Properties
         world.dim_c = 5
         num_listeners = 1 # Number of listeners= Number of agents
-        num_speakers = 4  # Number of speakers= Number of advisors
-        num_landmarks = 1 # Number of landmarks= Number of goals
+        num_speakers = 5  # Number of speakers= 4 good advisors + 1 adversarials advisors
+        num_landmarks = 1 # Number of landmarks= Number of goals = 1 for good advisors and 1 for adversarial advisor
 
         world.landmark_colors = np.array(sns.color_palette(n_colors=num_landmarks))
 
@@ -94,15 +94,23 @@ class Scenario(BaseScenario):
         landmark = np.random.choice(world.landmarks)
         quads = np.arange(4)
         np.random.shuffle(quads)
+
         for i, speaker in enumerate(world.speakers):
             li = 0
             speaker.listen_ind = li
             speaker.goal_a = world.listeners[li]
-            speaker.goal_b = landmark
-            speaker.quad = quads[i]
             speaker.color = np.array([0.25,0.25,0.25])
-            world.listeners[li].color = speaker.goal_b.color + np.array([0.25, 0.25, 0.25])
             world.listeners[li].speak_ind = i
+            speaker.goal_b = landmark
+            world.listeners[li].color = speaker.goal_b.color + np.array([0.25, 0.25, 0.25])
+
+            # Adversarial agent settings
+            if (i==4):
+                speaker.adversarial=True
+                
+            else:
+                speaker.adversarial=False
+                speaker.quad = quads[i]
 
         #Initial states are set at random
         for agent in world.agents:
@@ -122,9 +130,14 @@ class Scenario(BaseScenario):
     def calc_rewards(self, world):
         rews = []
         for speaker in world.speakers:
-            dist = np.sum(np.square(speaker.goal_a.state.p_pos -
-                                    speaker.goal_b.state.p_pos))
-            rew = -dist
+
+            dist = np.sum(np.square(speaker.goal_a.state.p_pos - speaker.goal_b.state.p_pos))
+
+            if (speaker.adversarial==True):
+                rew = dist
+            else:
+                rew = -dist
+            
             if dist < (speaker.goal_a.size + speaker.goal_b.size) * 1.5:
                 rew += 10.
             rews.append(rew)
@@ -137,6 +150,7 @@ class Scenario(BaseScenario):
         if share_rews:
             return sum(self.pair_rewards)
         if agent.listener:
+            print("speak Ind",agent.speak_ind)
             return self.pair_rewards[agent.speak_ind]
         else:
             return self.pair_rewards[agent.goal_a.speak_ind]
@@ -169,10 +183,13 @@ class Scenario(BaseScenario):
             #Speaker gets index of their listener
             # obs += [agent.listen_ind == np.arange(len(world.listeners))]
             # Speaker gets position and goal of listener
-            if agent.quad == self.get_quadrant(agent.goal_a.state.p_pos):
+            if(agent.adversarial==True):
                 obs += [np.array([1]), agent.goal_a.state.p_pos, agent.goal_b.state.p_pos]
             else:
-                obs += [np.array([0,0,0]), agent.goal_b.state.p_pos]
+                if agent.quad == self.get_quadrant(agent.goal_a.state.p_pos):
+                    obs += [np.array([1]), agent.goal_a.state.p_pos, agent.goal_b.state.p_pos]
+                else:
+                    obs += [np.array([0,0,0]), agent.goal_b.state.p_pos]
 
             # # give speaker index of their listener
             # # obs += [agent.listen_ind == np.arange(len(world.listeners))]

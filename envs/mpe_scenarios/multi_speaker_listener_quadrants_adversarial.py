@@ -17,8 +17,8 @@ class Scenario(BaseScenario):
         #Setting World Properties
         world.dim_c = 5
         num_listeners = 1 # Number of listeners= Number of agents
-        num_speakers = 4  # Number of speakers= Number of advisors
-        num_landmarks = 1 # Number of landmarks= Number of goals
+        num_speakers = 5  # Number of speakers= 4 good advisors + 1 adversarials advisors
+        num_landmarks = 2 # Number of landmarks= Number of goals = 1 for good advisors and 1 for adversarial advisor
 
         world.landmark_colors = np.array(sns.color_palette(n_colors=num_landmarks))
 
@@ -92,17 +92,26 @@ class Scenario(BaseScenario):
         # listen_inds = list(range(len(world.listeners)))
         # np.random.shuffle(listen_inds)  #Randomize which listener is used every episode
         landmark = np.random.choice(world.landmarks)
+        landmark_ad = np.random.choice(world.landmarks)
         quads = np.arange(4)
         np.random.shuffle(quads)
+
         for i, speaker in enumerate(world.speakers):
             li = 0
             speaker.listen_ind = li
             speaker.goal_a = world.listeners[li]
-            speaker.goal_b = landmark
-            speaker.quad = quads[i]
             speaker.color = np.array([0.25,0.25,0.25])
-            world.listeners[li].color = speaker.goal_b.color + np.array([0.25, 0.25, 0.25])
             world.listeners[li].speak_ind = i
+
+            # Adversarial agent settings
+            if (i==4):
+                speaker.adversarial=True
+                speaker.goal_b = landmark_ad
+            else:
+                speaker.adversarial=False
+                speaker.goal_b = landmark
+                speaker.quad = quads[i]
+                world.listeners[li].color = speaker.goal_b.color + np.array([0.25, 0.25, 0.25])
 
         #Initial states are set at random
         for agent in world.agents:
@@ -133,9 +142,9 @@ class Scenario(BaseScenario):
     def reward(self, agent, world):
         if self.pair_rewards is None:
             self.pair_rewards = self.calc_rewards(world)
-        share_rews = False
-        if share_rews:
-            return sum(self.pair_rewards)
+        # share_rews = False
+        # if share_rews:
+        #     return sum(self.pair_rewards)
         if agent.listener:
             return self.pair_rewards[agent.speak_ind]
         else:
@@ -169,10 +178,13 @@ class Scenario(BaseScenario):
             #Speaker gets index of their listener
             # obs += [agent.listen_ind == np.arange(len(world.listeners))]
             # Speaker gets position and goal of listener
-            if agent.quad == self.get_quadrant(agent.goal_a.state.p_pos):
+            if(agent.adversarial==True):
                 obs += [np.array([1]), agent.goal_a.state.p_pos, agent.goal_b.state.p_pos]
             else:
-                obs += [np.array([0,0,0]), agent.goal_b.state.p_pos]
+                if agent.quad == self.get_quadrant(agent.goal_a.state.p_pos):
+                    obs += [np.array([1]), agent.goal_a.state.p_pos, agent.goal_b.state.p_pos]
+                else:
+                    obs += [np.array([0,0,0]), agent.goal_b.state.p_pos]
 
             # # give speaker index of their listener
             # # obs += [agent.listen_ind == np.arange(len(world.listeners))]

@@ -4,7 +4,7 @@ Modified from OpenAI Baselines code to work with multi-agent envs
 import numpy as np
 from multiprocessing import Process, Pipe
 from baselines.common.vec_env import VecEnv, CloudpickleWrapper
-
+from .get_img import get_image
 
 def worker(remote, parent_remote, env_fn_wrapper):
     parent_remote.close()
@@ -82,6 +82,7 @@ class SubprocVecEnv(VecEnv):
             remote.send(('reset_task', None))
         return np.stack([remote.recv() for remote in self.remotes])
 
+
     def close(self):
         if self.closed:
             return
@@ -125,6 +126,10 @@ class DummyVecEnv(VecEnv):
     def reset(self):        
         results = [env.reset() for env in self.envs]
         return np.array(results)
+
+    def get_images(self):
+        #print(dir(self.envs[0].world.listeners[0]))
+        return get_image(self.envs[0].world.listeners[0].state.p_pos,self.envs[0].world.speakers[0].goal_b.state.p_pos)
 
     def close(self):
         return
