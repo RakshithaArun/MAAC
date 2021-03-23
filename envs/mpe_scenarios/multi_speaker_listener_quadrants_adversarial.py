@@ -45,12 +45,27 @@ class Scenario(BaseScenario):
             agent.name = 'agent %i' % agent.i
             agent.listener = False
             agent.collide = False
-            agent.size = 0.075
+            agent.size = 0.075  #can be changed
+            agent.silent = True
+            agent.accel = 1.5
+            agent.initial_mass = 1.0
+            agent.max_speed = 1.0
+            world.ghosts.append(agent)
+
+        num_ghosts = 4
+        world.ghosts = []
+        for ghost in range(num_ghosts):
+            agent = Agent()
+            agent.i = ghost
+            agent.name = 'ghost %i' % agent.i
+            agent.listener = False
+            agent.collide = False
+            agent.size = 0.075 #can be changed
             agent.movable = False
             agent.accel = 1.5
             agent.initial_mass = 1.0
             agent.max_speed = 1.0
-            world.speakers.append(agent)
+            world.speakers.append(agent) 
 
         #The World is collectively made up of listeners and speakers    
         world.agents = world.listeners + world.speakers
