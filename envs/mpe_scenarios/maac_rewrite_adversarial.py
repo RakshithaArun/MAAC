@@ -6,7 +6,6 @@ import random
 from multiagent.core import World, Agent, Landmark
 from multiagent.scenario import BaseScenario
 
-
 # AGENT TYPES
 
 AGENT_LISTENER = 0
@@ -33,7 +32,7 @@ class Scenario(BaseScenario):
         #Setting World Properties
         world.dim_c = 5
         self.num_listeners = 1 # Number of listeners= Number of agents
-        self.num_speakers = 4  # Number of speakers= Number of advisors
+        self.num_speakers = 5  # Number of speakers= Number of good advisors + 1 adversarial advisor
         self.num_landmarks = 1 # Number of landmarks= Number of goals
         self.num_ghosts = 4
 
@@ -50,6 +49,7 @@ class Scenario(BaseScenario):
         for speaker_ind in range(self.num_speakers):
             agent = self._create_speaker(speaker_ind)
             world.speakers.append(agent)
+        world.speakers[-1].adversarial = True
 
         world.landmarks = []
         for landmark_ind in range(self.num_landmarks):
@@ -97,6 +97,7 @@ class Scenario(BaseScenario):
         agent.listener = False
         agent.agent_type = AGENT_SPEAKER
         agent.movable = False
+        agent.adversarial = False
         return agent
 
     def _create_listener(self, ind):
@@ -150,16 +151,18 @@ class Scenario(BaseScenario):
         quads = np.arange(4)
         if shuff:
             np.random.shuffle(quads)
+        quads = list(quads)
         for i, speaker in enumerate(world.speakers):
             li = 0
             speaker.listen_ind = li
             speaker.goal_a = world.listeners[li]
             speaker.goal_b = landmark
-            speaker.quad = quads[i]
             speaker.color = np.array([0.25, 0.25, 0.25])
             world.listeners[li].color = speaker.goal_b.color + np.array([0.25, 0.25, 0.25])
             world.listeners[li].speak_ind = i
             # speaker.state.c = np.zeros(world.dim_c)
+            if not speaker.adversarial:
+                speaker.quad = quads.pop()
 
 
     def reset_world(self, world):
@@ -198,7 +201,11 @@ class Scenario(BaseScenario):
                         rew -= 1/dist
                     else:
                         rew -= 1000
-                    
+
+            if speaker.adversarial:
+                rew += 0.01
+            else:
+                rew -= 0.01
             rews.append(rew)
         return rews
 
@@ -209,9 +216,12 @@ class Scenario(BaseScenario):
         if share_rews:
             return sum(self.pair_rewards)
         if agent.listener:
-            return self.pair_rewards[agent.speak_ind]
+            return self.pair_rewards[-2]
         else:
-            return self.pair_rewards[agent.goal_a.speak_ind]
+            if agent.adversarial:
+                return self.pair_rewards[-1]
+            else:
+                return self.pair_rewards[-2]
 
     def observation(self, agent, world):
         if agent.listener:
@@ -241,16 +251,22 @@ class Scenario(BaseScenario):
             #Speaker gets index of their listener
             # obs += [agent.listen_ind == np.arange(len(world.listeners))]
             # Speaker gets position and goal of listener
-            if agent.quad == self.get_quadrant(agent.goal_a.state.p_pos):
+            if agent.adversarial:
                 obs += [np.array([1]), agent.goal_a.state.p_pos, agent.goal_b.state.p_pos]
             else:
-                obs += [np.array([0,0,0]), agent.goal_b.state.p_pos]
+                if agent.quad == self.get_quadrant(agent.goal_a.state.p_pos):
+                    obs += [np.array([1]), agent.goal_a.state.p_pos, agent.goal_b.state.p_pos]
+                else:
+                    obs += [np.array([0,0,0]), agent.goal_b.state.p_pos]
 
             for ghost in world.ghosts:
-                if agent.quad == self.get_quadrant(ghost.state.p_pos):
+                if agent.adversarial:
                     obs += [np.array([1]), ghost.state.p_pos]
                 else:
-                    obs += [np.array([0,0,0])]
+                    if agent.quad == self.get_quadrant(ghost.state.p_pos):
+                        obs += [np.array([1]), ghost.state.p_pos]
+                    else:
+                        obs += [np.array([0,0,0])]
 
             # # give speaker index of their listener
             # # obs += [agent.listen_ind == np.arange(len(world.listeners))]

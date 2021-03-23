@@ -5,7 +5,6 @@ import seaborn as sns
 from multiagent.core import World, Agent, Landmark
 from multiagent.scenario import BaseScenario
 
-
 class Scenario(BaseScenario):
 
     # Creates all of the entities that inhabit the world (landmarks, agents, etc.)

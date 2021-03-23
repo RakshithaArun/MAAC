@@ -198,6 +198,8 @@ class Scenario(BaseScenario):
                         rew -= 1/dist
                     else:
                         rew -= 1000
+            
+            rew -= 0.01
                     
             rews.append(rew)
         return rews
