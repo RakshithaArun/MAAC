@@ -125,31 +125,45 @@ class Scenario(BaseScenario):
             else:
                 return 2
 
-    def reset_world(self, world):
-        # listen_inds = list(range(len(world.listeners)))
-        # np.random.shuffle(listen_inds)  #Randomize which listener is used every episode
+    def _reset_movable(self, world):
+        for agent in world.listeners + world.ghosts:
+            agent.state.p_pos = np.random.uniform(-1,+1, world.dim_p)
+            agent.state.p_vel = np.zeros(world.dim_p)
+            agent.state.c = np.zeros(world.dim_c)
+
+    def _reset_landmarks(self, world):
+        for i, landmark in enumerate(world.landmarks):
+            landmark.state.p_pos = np.random.uniform(-1,+1, world.dim_p)
+            landmark.state.p_vel = np.zeros(world.dim_p)
+
+    def _reset_speakers(self, world, shuff=True):
         landmark = np.random.choice(world.landmarks)
         quads = np.arange(4)
-        np.random.shuffle(quads)
+        if shuff:
+            np.random.shuffle(quads)
         for i, speaker in enumerate(world.speakers):
             li = 0
             speaker.listen_ind = li
             speaker.goal_a = world.listeners[li]
             speaker.goal_b = landmark
             speaker.quad = quads[i]
-            speaker.color = np.array([0.25,0.25,0.25])
+            speaker.color = np.array([0.25, 0.25, 0.25])
             world.listeners[li].color = speaker.goal_b.color + np.array([0.25, 0.25, 0.25])
             world.listeners[li].speak_ind = i
 
-        #Initial states are set at random
-        for agent in world.agents:
-            agent.state.p_pos = np.random.uniform(-1,+1, world.dim_p)
-            agent.state.p_vel = np.zeros(world.dim_p)
-            agent.state.c = np.zeros(world.dim_c)
+    def reset_world(self, world):
+        # listen_inds = list(range(len(world.listeners)))
+        # np.random.shuffle(listen_inds)  #Randomize which listener is used every episode
+        self._reset_speakers(world)
+        self._reset_movable(world)
 
-        for i, landmark in enumerate(world.landmarks):
-            landmark.state.p_pos = np.random.uniform(-1,+1, world.dim_p)
-            landmark.state.p_vel = np.zeros(world.dim_p)
+        #   #Initial states are set at random
+        #   for agent in world.agents:
+        #       agent.state.p_pos = np.random.uniform(-1,+1, world.dim_p)
+        #       agent.state.p_vel = np.zeros(world.dim_p)
+        #       agent.state.c = np.zeros(world.dim_c)
+
+        self._reset_landmarks(world)
         self.reset_cached_rewards()
 
     def benchmark_data(self, agent, world):

@@ -129,7 +129,12 @@ class DummyVecEnv(VecEnv):
 
     def get_images(self):
         #print(dir(self.envs[0].world.listeners[0]))
-        return get_image(self.envs[0].world.listeners[0].state.p_pos,self.envs[0].world.speakers[0].goal_b.state.p_pos)
+        ghost_locs = [ghost.state.p_pos for ghost in self.envs[0].world.ghosts]
+        return get_image(
+            self.envs[0].world.listeners[0].state.p_pos,
+            self.envs[0].world.speakers[0].goal_b.state.p_pos,
+            ghost_locs
+        )
 
     def close(self):
         return
