@@ -150,6 +150,7 @@ class Scenario(BaseScenario):
             speaker.color = np.array([0.25, 0.25, 0.25])
             world.listeners[li].color = speaker.goal_b.color + np.array([0.25, 0.25, 0.25])
             world.listeners[li].speak_ind = i
+            speaker.state.c = np.zeros(world.dim_c)
 
     def reset_world(self, world):
         # listen_inds = list(range(len(world.listeners)))
