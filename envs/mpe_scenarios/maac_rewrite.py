@@ -1,5 +1,6 @@
 import numpy as np
 import seaborn as sns
+import random
 
 #Importing from multiagent package
 from multiagent.core import World, Agent, Landmark
@@ -11,7 +12,13 @@ from multiagent.scenario import BaseScenario
 AGENT_LISTENER = 0
 AGENT_SPEAKER = 1
 AGENT_GHOST = 2
-
+random_choices = [[0.03, 0],[-0.03, 0],[0, -0.03],[0, 0.03]]
+def world_step(world):
+    for ghost in world.ghosts:
+        dir = random.choice(random_choices)
+        ghost.state.p_pos[0] += dir[0]
+        ghost.state.p_pos[1] += dir[1]
+    World.step(world)
 
 class Scenario(BaseScenario):
 
@@ -21,6 +28,7 @@ class Scenario(BaseScenario):
 
     def make_world(self):
         world = World()
+        world.step = lambda :world_step(world)
 
         #Setting World Properties
         world.dim_c = 5
@@ -29,7 +37,7 @@ class Scenario(BaseScenario):
         self.num_landmarks = 1 # Number of landmarks= Number of goals
         self.num_ghosts = 4
 
-        world.landmark_colors = np.array(sns.color_palette(n_colors=num_landmarks))
+        world.landmark_colors = np.array(sns.color_palette(n_colors=self.num_landmarks))
 
         #Creation of listeners
         world.listeners = []
@@ -95,6 +103,7 @@ class Scenario(BaseScenario):
         agent = self._create_agent_base(ind)
         agent.agent_type = AGENT_LISTENER
         agent.listener = True
+        agent.silent = True
         agent.movable = True
         return agent
 
@@ -126,7 +135,7 @@ class Scenario(BaseScenario):
                 return 2
 
     def _reset_movable(self, world):
-        for agent in world.listeners + world.ghosts:
+        for agent in world.listeners + world.speakers + world.ghosts:
             agent.state.p_pos = np.random.uniform(-1,+1, world.dim_p)
             agent.state.p_vel = np.zeros(world.dim_p)
             agent.state.c = np.zeros(world.dim_c)
@@ -150,7 +159,8 @@ class Scenario(BaseScenario):
             speaker.color = np.array([0.25, 0.25, 0.25])
             world.listeners[li].color = speaker.goal_b.color + np.array([0.25, 0.25, 0.25])
             world.listeners[li].speak_ind = i
-            speaker.state.c = np.zeros(world.dim_c)
+            # speaker.state.c = np.zeros(world.dim_c)
+
 
     def reset_world(self, world):
         # listen_inds = list(range(len(world.listeners)))
