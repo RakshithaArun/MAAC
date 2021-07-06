@@ -2,6 +2,7 @@ import argparse
 import torch
 import os
 import numpy as np
+import csv
 
 from gym.spaces import Box, Discrete
 from pathlib import Path
@@ -49,20 +50,32 @@ def run(config):
     torch.manual_seed(run_num)
     np.random.seed(run_num)
     env = make_parallel_env(config.env_id, config.n_rollout_threads, run_num)
-    model = AttentionSAC.init_from_env(env,
-                                       tau=config.tau,
-                                       pi_lr=config.pi_lr,
-                                       q_lr=config.q_lr,
-                                       gamma=config.gamma,
-                                       pol_hidden_dim=config.pol_hidden_dim,
-                                       critic_hidden_dim=config.critic_hidden_dim,
-                                       attend_heads=config.attend_heads,
-                                       reward_scale=config.reward_scale)
+    # model = AttentionSAC.init_from_env(env,
+    #                                    tau=config.tau,
+    #                                    pi_lr=config.pi_lr,
+    #                                    q_lr=config.q_lr,
+    #                                    gamma=config.gamma,
+    #                                    pol_hidden_dim=config.pol_hidden_dim,
+    #                                    critic_hidden_dim=config.critic_hidden_dim,
+    #                                    attend_heads=config.attend_heads,
+    #                                    reward_scale=config.reward_scale)
+
+    # Model used to test with adversarial agent 
+    # model= AttentionSAC.init_from_save ("C:\\Users\\HP\\Desktop\\NTU\\FYP\\FYP Code\\MAAC\\Output\\run140\\model.pt")
+    # print("Model instantiated")
+
+    # Model used to test without adversarial agent 
+    model= AttentionSAC.init_from_save ("C:\\Users\\HP\\Desktop\\NTU\\FYP\\FYP Code\\MAAC\\Output\\run148\\model.pt")
+    print("Model instantiated")
+
     replay_buffer = ReplayBuffer(config.buffer_length, model.nagents,
                                  [obsp.shape[0] for obsp in env.observation_space],
                                  [acsp.shape[0] if isinstance(acsp, Box) else acsp.n
                                   for acsp in env.action_space])
     t = 0
+
+    row_list = []
+
     for ep_i in range(0, config.n_episodes, config.n_rollout_threads):
         print("Episodes %i-%i of %i" % (ep_i + 1,
                                         ep_i + 1 + config.n_rollout_threads,
@@ -106,7 +119,11 @@ def run(config):
             if (dones[0][0]):
                 print("Breakin the epsiodeeeee at timestep", et_i)
                 break
-        et_i += 1
+        
+        et_i += 1   
+
+        row_list.append((ep_i+1,et_i))   
+
         ep_rews = replay_buffer.get_average_rewards(
             et_i * config.n_rollout_threads)
         for a_i, a_ep_rew in enumerate(ep_rews):
@@ -118,6 +135,12 @@ def run(config):
             os.makedirs(run_dir / 'incremental', exist_ok=True)
             model.save(run_dir / 'incremental' / ('model_ep%i.pt' % (ep_i + 1)))
             model.save(run_dir / 'model.pt')
+
+    with open('Timesteps_vs_Episodes.csv', 'w', newline='') as file:
+         writer = csv.writer(file)
+         writer.writerow(["Ep No", "Number of Timesteps"])
+         for row in row_list:
+            writer.writerow(row)
 
     model.save(run_dir / 'model.pt')
     env.close()
@@ -131,7 +154,7 @@ if __name__ == '__main__':
     parser.add_argument("model_name",help="Name of directory to store " + "model/training contents")
     parser.add_argument("--n_rollout_threads", default=12, type=int)
     parser.add_argument("--buffer_length", default=int(1e6), type=int)
-    parser.add_argument("--n_episodes", default=10000, type=int)
+    parser.add_argument("--n_episodes", default=500, type=int) #50000
     parser.add_argument("--episode_length", default=25, type=int)
     parser.add_argument("--steps_per_update", default=100, type=int)
     parser.add_argument("--num_updates", default=4, type=int,

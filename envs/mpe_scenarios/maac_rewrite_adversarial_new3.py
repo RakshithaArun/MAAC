@@ -121,6 +121,10 @@ class Scenario(BaseScenario):
 
     def post_step(self, world):
         self.reset_cached_rewards()
+
+    #method to signal end of game
+    def game_done(self, agent, world):
+        return world.done
     
     @staticmethod
     def get_quadrant(postion):
@@ -178,7 +182,16 @@ class Scenario(BaseScenario):
         #       agent.state.c = np.zeros(world.dim_c)
 
         self._reset_landmarks(world)
+        dist = np.sum(np.square(world.landmarks[0].state.p_pos - world.agents[0].state.p_pos))
+        if dist< 0.225:
+            #vprint(world.landmarks[0].state.p_pos, ",", world.agents[0].state.p_pos)
+            world.landmarks[0].state.p_pos += 0.5
+            # print(world.landmarks[0].state.p_pos, ",", world.agents[0].state.p_pos)
+        # world.landmarks[0].state.p_pos=world.agents[0].state.p_pos
+        # world.landmarks[0].state.p_pos+= 0.500
         self.reset_cached_rewards()
+
+        world.done=False
 
     def benchmark_data(self, agent, world):
         #Data returned for benchmarking purposes
@@ -191,7 +204,7 @@ class Scenario(BaseScenario):
                                     speaker.goal_b.state.p_pos))
             rew = -dist
             if dist < (speaker.goal_a.size + speaker.goal_b.size) * 1.5:
-                rew += 10
+                world.done = True
             
             for ghost in world.ghosts:
                 dist = np.sum(np.square(speaker.goal_a.state.p_pos -

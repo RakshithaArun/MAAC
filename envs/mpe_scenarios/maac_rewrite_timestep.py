@@ -195,11 +195,11 @@ class Scenario(BaseScenario):
                         ghost.state.p_pos))
                 if dist< 0.225:
                     if dist>0.001:
-                        rew -= 1/dist
+                        rew -= (0.01)* (1/dist)
                     else:
-                        rew -= 1000
+                        rew -= 10
             
-            rew -= 0.01
+            rew -= 1
                     
             rews.append(rew)
         return rews

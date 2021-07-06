@@ -121,6 +121,10 @@ class Scenario(BaseScenario):
 
     def post_step(self, world):
         self.reset_cached_rewards()
+
+    #method to signal end of game
+    def game_done(self, agent, world):
+        return world.done
     
     @staticmethod
     def get_quadrant(postion):
@@ -163,6 +167,7 @@ class Scenario(BaseScenario):
             # speaker.state.c = np.zeros(world.dim_c)
             if not speaker.adversarial:
                 speaker.quad = quads.pop()
+        np.random.shuffle(world.speakers)
 
 
     def reset_world(self, world):
@@ -178,52 +183,56 @@ class Scenario(BaseScenario):
         #       agent.state.c = np.zeros(world.dim_c)
 
         self._reset_landmarks(world)
+        # world.landmarks[0].state.p_pos=world.agents[0].state.p_pos
+        # world.landmarks[0].state.p_pos+= 0.500
         self.reset_cached_rewards()
+
+        world.done=False
 
     def benchmark_data(self, agent, world):
         #Data returned for benchmarking purposes
         return reward(agent, world)
 
     def calc_rewards(self, world):
-        rews = []
-        for speaker in world.speakers:
-            dist = np.sum(np.square(speaker.goal_a.state.p_pos -
-                                    speaker.goal_b.state.p_pos))
-            rew = -dist
-            if dist < (speaker.goal_a.size + speaker.goal_b.size) * 1.5:
-                rew += 10
-            
-            for ghost in world.ghosts:
-                dist = np.sum(np.square(speaker.goal_a.state.p_pos -
-                        ghost.state.p_pos))
-                if dist< 0.225:
-                    if dist>0.001:
-                        rew -= (0.01)* (1/dist)
-                    else:
-                        rew -= 10
+        good_reward = adversarial_reward = 0
+        speaker=world.speakers[0]
 
-            if speaker.adversarial:
-                rew += 1
-            else:
-                rew -= 1
-            rews.append(rew)
-        return rews
+        dist = np.sum(np.square(speaker.goal_a.state.p_pos -
+                                speaker.goal_b.state.p_pos))
+        rew = -dist
+        if dist < (speaker.goal_a.size + speaker.goal_b.size) * 1.5:
+            world.done = True
+        
+        for ghost in world.ghosts:
+            dist = np.sum(np.square(speaker.goal_a.state.p_pos -
+                    ghost.state.p_pos))
+            if dist< 0.225:
+                if dist>0.001:
+                    rew -= (0.01)* (1/dist)
+                else:
+                    rew -= 10
+
+        good_reward = adversarial_reward = rew
+
+        good_reward -=1
+        adversarial_reward +=1
+
+        return good_reward,adversarial_reward
 
     def reward(self, agent, world):
         if self.pair_rewards is None:
             self.pair_rewards = self.calc_rewards(world)
-        share_rews = False
-        if share_rews:
-            return sum(self.pair_rewards)
+        good_reward, adversarial_reward = self.pair_rewards
+
         if agent.listener:
-            return self.pair_rewards[-2]
+            return good_reward
         else:
             if agent.adversarial:
                 #print("Adversarial reward", self.pair_rewards[-1] )
-                return self.pair_rewards[-1]
+                return adversarial_reward
             else:
                 #print("Speaker reward", self.pair_rewards[-2] )
-                return self.pair_rewards[-2]
+                return good_reward
 
     def observation(self, agent, world):
         if agent.listener:

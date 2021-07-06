@@ -1,3 +1,8 @@
+# Trying to visualise the predicted rewards for the adversarial agent
+
+# Current attempt --> Add in another learner agent to simply stay put 
+# but receive the rewards of the adversarial lad
+
 import numpy as np
 import seaborn as sns
 import random
@@ -5,6 +10,7 @@ import random
 #Importing from multiagent package
 from multiagent.core import World, Agent, Landmark
 from multiagent.scenario import BaseScenario
+
 
 # AGENT TYPES
 
@@ -31,8 +37,8 @@ class Scenario(BaseScenario):
 
         #Setting World Properties
         world.dim_c = 5
-        self.num_listeners = 1 # Number of listeners= Number of agents
-        self.num_speakers = 5  # Number of speakers= Number of good advisors + 1 adversarial advisor
+        self.num_listeners = 2 # Number of listeners= Number of agents
+        self.num_speakers = 4  # Number of speakers= Number of advisors
         self.num_landmarks = 1 # Number of landmarks= Number of goals
         self.num_ghosts = 4
 
@@ -43,13 +49,14 @@ class Scenario(BaseScenario):
         for listener_ind in range(self.num_listeners):
             agent = self._create_listener(listener_ind)
             world.listeners.append(agent)
+        world.listeners[-1].predicted = True
 
         #Creation of speakers
         world.speakers = []
         for speaker_ind in range(self.num_speakers):
             agent = self._create_speaker(speaker_ind)
             world.speakers.append(agent)
-        world.speakers[-1].adversarial = True
+        world.speakers[-1].predicted = True
 
         world.landmarks = []
         for landmark_ind in range(self.num_landmarks):
@@ -89,6 +96,7 @@ class Scenario(BaseScenario):
         agent.accel = 1.5
         agent.initial_mass = 1.0
         agent.max_speed = 1.0
+        agent.predicted=False
         return agent
 
     def _create_speaker(self, ind):
@@ -97,7 +105,7 @@ class Scenario(BaseScenario):
         agent.listener = False
         agent.agent_type = AGENT_SPEAKER
         agent.movable = False
-        agent.adversarial = False
+        agent.predicted=False
         return agent
 
     def _create_listener(self, ind):
@@ -121,6 +129,10 @@ class Scenario(BaseScenario):
 
     def post_step(self, world):
         self.reset_cached_rewards()
+
+    #method to signal end of game
+    def game_done(self, agent, world):
+        return world.done
     
     @staticmethod
     def get_quadrant(postion):
@@ -151,26 +163,22 @@ class Scenario(BaseScenario):
         quads = np.arange(4)
         if shuff:
             np.random.shuffle(quads)
-        quads = list(quads)
         for i, speaker in enumerate(world.speakers):
             li = 0
             speaker.listen_ind = li
             speaker.goal_a = world.listeners[li]
             speaker.goal_b = landmark
+            speaker.quad = quads[i]
             speaker.color = np.array([0.25, 0.25, 0.25])
             world.listeners[li].color = speaker.goal_b.color + np.array([0.25, 0.25, 0.25])
             world.listeners[li].speak_ind = i
             # speaker.state.c = np.zeros(world.dim_c)
-            if not speaker.adversarial:
-                speaker.quad = quads.pop()
-
 
     def reset_world(self, world):
         # listen_inds = list(range(len(world.listeners)))
         # np.random.shuffle(listen_inds)  #Randomize which listener is used every episode
         self._reset_speakers(world)
         self._reset_movable(world)
-
         #   #Initial states are set at random
         #   for agent in world.agents:
         #       agent.state.p_pos = np.random.uniform(-1,+1, world.dim_p)
@@ -179,6 +187,8 @@ class Scenario(BaseScenario):
 
         self._reset_landmarks(world)
         self.reset_cached_rewards()
+        
+        world.done= False
 
     def benchmark_data(self, agent, world):
         #Data returned for benchmarking purposes
@@ -191,7 +201,7 @@ class Scenario(BaseScenario):
                                     speaker.goal_b.state.p_pos))
             rew = -dist
             if dist < (speaker.goal_a.size + speaker.goal_b.size) * 1.5:
-                rew += 10
+                world.done = True
             
             for ghost in world.ghosts:
                 dist = np.sum(np.square(speaker.goal_a.state.p_pos -
@@ -201,12 +211,13 @@ class Scenario(BaseScenario):
                         rew -= (0.01)* (1/dist)
                     else:
                         rew -= 10
-
-            if speaker.adversarial:
+            if speaker.predicted:
                 rew += 1
             else:
                 rew -= 1
+                    
             rews.append(rew)
+        # print (rews)
         return rews
 
     def reward(self, agent, world):
@@ -216,14 +227,12 @@ class Scenario(BaseScenario):
         if share_rews:
             return sum(self.pair_rewards)
         if agent.listener:
-            return self.pair_rewards[-2]
-        else:
-            if agent.adversarial:
-                #print("Adversarial reward", self.pair_rewards[-1] )
+            if agent.predicted:
                 return self.pair_rewards[-1]
             else:
-                #print("Speaker reward", self.pair_rewards[-2] )
                 return self.pair_rewards[-2]
+        else:
+            return self.pair_rewards[-2]
 
     def observation(self, agent, world):
         if agent.listener:
@@ -253,22 +262,16 @@ class Scenario(BaseScenario):
             #Speaker gets index of their listener
             # obs += [agent.listen_ind == np.arange(len(world.listeners))]
             # Speaker gets position and goal of listener
-            if agent.adversarial:
+            if agent.quad == self.get_quadrant(agent.goal_a.state.p_pos):
                 obs += [np.array([1]), agent.goal_a.state.p_pos, agent.goal_b.state.p_pos]
             else:
-                if agent.quad == self.get_quadrant(agent.goal_a.state.p_pos):
-                    obs += [np.array([1]), agent.goal_a.state.p_pos, agent.goal_b.state.p_pos]
-                else:
-                    obs += [np.array([0,0,0]), agent.goal_b.state.p_pos]
+                obs += [np.array([0,0,0]), agent.goal_b.state.p_pos]
 
             for ghost in world.ghosts:
-                if agent.adversarial:
+                if agent.quad == self.get_quadrant(ghost.state.p_pos):
                     obs += [np.array([1]), ghost.state.p_pos]
                 else:
-                    if agent.quad == self.get_quadrant(ghost.state.p_pos):
-                        obs += [np.array([1]), ghost.state.p_pos]
-                    else:
-                        obs += [np.array([0,0,0])]
+                    obs += [np.array([0,0,0])]
 
             # # give speaker index of their listener
             # # obs += [agent.listen_ind == np.arange(len(world.listeners))]

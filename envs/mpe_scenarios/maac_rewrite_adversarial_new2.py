@@ -121,6 +121,10 @@ class Scenario(BaseScenario):
 
     def post_step(self, world):
         self.reset_cached_rewards()
+
+    #method to signal end of game
+    def game_done(self, agent, world):
+        return world.done
     
     @staticmethod
     def get_quadrant(postion):
@@ -137,13 +141,15 @@ class Scenario(BaseScenario):
 
     def _reset_movable(self, world):
         for agent in world.listeners + world.speakers + world.ghosts:
-            agent.state.p_pos = np.random.uniform(-1,+1, world.dim_p)
+            # agent.state.p_pos = np.random.uniform(-1,+1, world.dim_p)
+            agent.state.p_pos = np.random.uniform(-0.85,+0.85, world.dim_p)
             agent.state.p_vel = np.zeros(world.dim_p)
             agent.state.c = np.zeros(world.dim_c)
 
     def _reset_landmarks(self, world):
         for i, landmark in enumerate(world.landmarks):
-            landmark.state.p_pos = np.random.uniform(-1,+1, world.dim_p)
+            # landmark.state.p_pos = np.random.uniform(-1,+1, world.dim_p)
+            landmark.state.p_pos = np.random.uniform(-0.85,+0.85, world.dim_p)
             landmark.state.p_vel = np.zeros(world.dim_p)
 
     def _reset_speakers(self, world, shuff=True):
@@ -178,7 +184,11 @@ class Scenario(BaseScenario):
         #       agent.state.c = np.zeros(world.dim_c)
 
         self._reset_landmarks(world)
+        # world.landmarks[0].state.p_pos=world.agents[0].state.p_pos
+        # world.landmarks[0].state.p_pos+= 0.500
         self.reset_cached_rewards()
+
+        world.done=False
 
     def benchmark_data(self, agent, world):
         #Data returned for benchmarking purposes
@@ -191,7 +201,8 @@ class Scenario(BaseScenario):
                                     speaker.goal_b.state.p_pos))
             rew = -dist
             if dist < (speaker.goal_a.size + speaker.goal_b.size) * 1.5:
-                rew += 10
+                rew +=10
+                world.done = True
             
             for ghost in world.ghosts:
                 dist = np.sum(np.square(speaker.goal_a.state.p_pos -
